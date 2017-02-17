@@ -7,7 +7,13 @@
 --
 {-# LANGUAGE Arrows #-}
 
+module Main where
+import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
+
+main :: IO ()
+main = do args <- getArgs
+          (return $ readExpr $ args !! 0) >>= putStrLn
 
 symbol :: Parser Char
 symbol = oneOf "!$%&*+_/:<=?>@^_~#"
