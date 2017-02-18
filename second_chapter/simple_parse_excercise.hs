@@ -151,6 +151,10 @@ parseRatio = do x <- many1 digit
                 y <- many1 digit
                 return $ Ratio ((read x) % (read y))
 
+toDouble :: LispVal -> Double
+toDouble (Float f) = realToFrac f
+toDouble (Number n) = fromIntegral n
+
 parseComplex :: Parser LispVal
 parseComplex = do x <- try $ parseFloat <|> parseDecimal
                   char '+'
