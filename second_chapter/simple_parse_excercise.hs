@@ -8,16 +8,18 @@
 {-# LANGUAGE Arrows #-}
 
 module Main where
+
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
+import Numeric
 
 main :: IO ()
 main = do args <- getArgs
           (return $ readExpr $ args !! 0) >>= putStrLn
 
 symbol :: Parser Char
-symbol = oneOf "!$%&*+_/:<=?>@^_~#"
+symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
@@ -33,6 +35,7 @@ data LispVal = Atom String
            | Number Integer
            | String String
            | Bool Bool
+           | Character Char
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -52,7 +55,8 @@ escapedChars = do char '\\'
 
 parseString1 :: Parser LispVal
 parseString1 = do char '"'
-                  x <- many $ escapedChars <|> noneOf "\"\\"
+                  x <- many $ (escapedChars <|> noneOf "\"\\")
+                  char '"'
                   return $ String x
 
 parseAtom :: Parser LispVal
@@ -75,7 +79,56 @@ parseNumber2 :: Parser LispVal
 parseNumber2 = (many1 digit)
            >>= (\x -> (return $ (Number . read) x))
 
+parseNumber3 :: Parser LispVal
+parseNumber3 = parseDecimal1 <|> parseDecimal2 <|> parseHex <|> parseOct <|> parseBin
+
+parseDecimal1 :: Parser LispVal
+parseDecimal1 = many1 digit >>= (return . Number . read)
+
+parseDecimal2 :: Parser LispVal
+parseDecimal2 = do try $ string "#d"
+                   x <- many1 digit
+                   (return . Number . read) x
+
+parseHex :: Parser LispVal
+parseHex = do try $ string "#x"
+              x <- many1 hexDigit
+              return $ Number (hex2dig x)
+
+parseOct :: Parser LispVal
+parseOct = do try $ string "#o"
+              x <- many1 octDigit
+              return $ Number (oct2dig x)
+
+parseBin :: Parser LispVal
+parseBin = do try $ string "#b"
+              x <- many1 (oneOf "10")
+              return $ Number (bin2dig x)
+
+oct2dig x = fst $ readOct x !! 0
+hex2dig x = fst $ readHex x !! 0
+bin2dig  = bin2dig' 0
+bin2dig' digint "" = digint
+bin2dig' digint (x:xs) = let old = 2 * digint + (if x == '0' then 0 else 1) in bin2dig' old xs
+
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
-        <|> parseNumber
-        <|> parseString1
+        <|> try parseNumber
+        <|> try parseString1
+        <|> try parseBool
+        <|> try parseCharacter
+
+parseBool :: Parser LispVal
+parseBool = do
+  char '#'
+  (char 'f' >> return (Bool False)) <|> (char 't' >> return (Bool True))
+
+parseCharacter :: Parser LispVal
+parseCharacter = do
+  try $ string "#\\"
+  value <- try (string "newline" <|> string "space")
+          <|> do { x <- anyChar; notFollowedBy alphaNum; return [x] }
+   return $ (Character $ case value of
+     "space" -> ' '
+     "newline" -> '\n'
+     _ -> (value !! 0))
