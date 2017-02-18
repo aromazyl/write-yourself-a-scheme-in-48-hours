@@ -178,6 +178,30 @@ parseComplex = do x <- try $ parseFloat <|> parseDecimal1
 parseList ::  Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
 
+parseAnyList :: Parser LispVal
+parseAnyList = do
+  P.char '('
+  optionalSpaces
+  head <- P.sepEndBy parseExpr spaces
+  tail <- (P.char '.' >> spaces >> parseExpr) <|> return (Nil ())
+  optionalSpaces
+  P.char ')'
+  return $ case tail of
+             (Nil ()) -> List head
+             otherwise -> DottedList head tail
+
+parseList1 :: Parser LispVal
+parseList1 = between beg end parseList2
+           where beg = (char '(' >> skipMany space)
+                 end = (skipMany space >> char ')')
+
+parseList2 :: Parser LispVal
+parseList2 = do list <- sepEndBy parseExpr spaces
+                maybeDatum <- optionMaybe (char '.' >> spaces >> parseExpr)
+                return $ case maybeDatum of
+                           Nothing -> List list
+                           Just datum -> DottedList list datum
+
 parseDottedList :: Parser LispVal
 parseDottedList = do
   head <- endBy parseExpr spaces
