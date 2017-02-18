@@ -13,6 +13,7 @@ import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Numeric
+import Data.Array
 import Data.Ratio
 import Data.Complex
 
@@ -178,6 +179,7 @@ parseComplex = do x <- try $ parseFloat <|> parseDecimal1
 parseList ::  Parser LispVal
 parseList = liftM List $ sepBy parseExpr spaces
 
+{-
 parseAnyList :: Parser LispVal
 parseAnyList = do
   P.char '('
@@ -189,6 +191,7 @@ parseAnyList = do
   return $ case tail of
              (Nil ()) -> List head
              otherwise -> DottedList head tail
+-}
 
 parseList1 :: Parser LispVal
 parseList1 = between beg end parseList2
