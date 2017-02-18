@@ -128,7 +128,7 @@ parseCharacter = do
   try $ string "#\\"
   value <- try (string "newline" <|> string "space")
           <|> do { x <- anyChar; notFollowedBy alphaNum; return [x] }
-   return $ (Character $ case value of
-     "space" -> ' '
-     "newline" -> '\n'
-     _ -> (value !! 0))
+  return $ case value of
+             "space" -> Character ' '
+             "newline" -> Character '\n'
+             otherwise -> Character (value !! 0)
