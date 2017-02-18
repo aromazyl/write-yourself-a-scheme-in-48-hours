@@ -14,6 +14,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Numeric
 import Data.Ratio
+import Data.Complex
 
 main :: IO ()
 main = do args <- getArgs
@@ -156,8 +157,8 @@ toDouble (Float f) = realToFrac f
 toDouble (Number n) = fromIntegral n
 
 parseComplex :: Parser LispVal
-parseComplex = do x <- try $ parseFloat <|> parseDecimal
+parseComplex = do x <- try $ parseFloat <|> parseDecimal1
                   char '+'
-                  y <- try $ parseFloat <|> parseDecimal
+                  y <- try $ parseFloat <|> parseDecimal1
                   char 'i'
                   return $ Complex (toDouble x :+ toDouble y)
