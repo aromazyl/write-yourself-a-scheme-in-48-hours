@@ -41,6 +41,7 @@ data LispVal = Atom String
              | Float Float
              | Ratio Rational
              | Complex (Complex Double)
+             | Vector (Array Int LispVal)
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -129,6 +130,12 @@ parseExpr = parseAtom
                x <- (try parseList) <|> parseDottedList
                char ')'
                return x
+        <|> parseQuasiQuoted
+        <|> parseQuasiQuoted
+        <|> try (do string "#("
+                    x <- parseVector
+                    char ')'
+                    return x)
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -188,3 +195,13 @@ parseQuasiQuoted = do
   char '`'
   x <- parseExpr
   return $ List [Atom "quasiquote", x]
+
+parseUnQuote :: Parser LispVal
+parseUnQuote = do
+  char ','
+  x <- parseExpr
+  return $ List [Atom "unquote", x]
+
+parseVector :: Parser LispVal
+parseVector = do arrayValues <- sepBy parseExpr spaces
+                 return $ Vector (listArray (0, (length arrayValues - 1)) arrayValues)
