@@ -25,22 +25,22 @@ symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
-      Left err -> "No match: " ++ (show err :: String)
-      Right val -> "Found value"
+                   Left err -> "No match: " ++ (show err :: String)
+                   Right val -> "Found value"
 
 spaces :: Parser ()
 spaces = skipMany1 space
 
 data LispVal = Atom String
-           | List [LispVal]
-           | DottedList [LispVal]
-           | Number Integer
-           | String String
-           | Bool Bool
-           | Character Char
-           | Float Float
-           | Ratio Rational
-           | Complex (Complex Double)
+             | List [LispVal]
+             | DottedList [LispVal] LispVal
+             | Number Integer
+             | String String
+             | Bool Bool
+             | Character Char
+             | Float Float
+             | Ratio Rational
+             | Complex (Complex Double)
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -52,11 +52,11 @@ escapedChars :: Parser Char
 escapedChars = do char '\\'
                   x <- oneOf "\\\"ntr"
                   return $ case x of
-                    'n'  -> '\n'
-                    't'  -> '\t'
-                    'r'  -> '\r'
-                    '\\' -> x
-                    '"'  -> x
+                             'n'  -> '\n'
+                             't'  -> '\t'
+                             'r'  -> '\r'
+                             '\\' -> x
+                             '"'  -> x
 
 parseString1 :: Parser LispVal
 parseString1 = do char '"'
@@ -69,9 +69,9 @@ parseAtom = do first <- letter <|> symbol
                rest <- many (letter <|> digit <|> symbol)
                let atom = [first] ++ rest
                return $ case atom of
-                          "#t" -> Bool True
-                          "#f" -> Bool False
-                          otherwise -> Atom atom
+                 "#t" -> Bool True
+                 "#f" -> Bool False
+                 otherwise -> Atom atom
 
 parseNumber :: Parser LispVal
 parseNumber = liftM (Number . read) $ many1 digit
@@ -124,6 +124,11 @@ parseExpr = parseAtom
         <|> try parseCharacter
         <|> try parseFloat
         <|> try parseRatio
+        <|> parseQuoted
+        <|> do char '('
+               x <- (try parseList) <|> parseDottedList
+               char ')'
+               return x
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -163,3 +168,23 @@ parseComplex = do x <- try $ parseFloat <|> parseDecimal1
                   char 'i'
                   return $ Complex (toDouble x :+ toDouble y)
 
+parseList ::  Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  head <- endBy parseExpr spaces
+  tail <- char '.' >> spaces >> parseExpr
+  return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quote", x]
+
+parseQuasiQuoted :: Parser LispVal
+parseQuasiQuoted = do
+  char '`'
+  x <- parseExpr
+  return $ List [Atom "quasiquote", x]
