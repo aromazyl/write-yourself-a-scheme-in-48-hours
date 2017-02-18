@@ -36,6 +36,7 @@ data LispVal = Atom String
            | String String
            | Bool Bool
            | Character Char
+           | Float Float
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -117,6 +118,7 @@ parseExpr = parseAtom
         <|> try parseString1
         <|> try parseBool
         <|> try parseCharacter
+        <|> try parseFloat
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -132,3 +134,9 @@ parseCharacter = do
              "space" -> Character ' '
              "newline" -> Character '\n'
              otherwise -> Character (value !! 0)
+
+parseFloat :: Parser LispVal
+parseFloat = do x <- many1 digit
+                char '.'
+                y <- many1 digit
+                return $ Float (fst . head $ readFloat (x ++ "." ++ y))
