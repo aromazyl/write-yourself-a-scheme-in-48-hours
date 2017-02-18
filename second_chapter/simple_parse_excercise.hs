@@ -13,6 +13,7 @@ import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
 import Numeric
+import Data.Ratio
 
 main :: IO ()
 main = do args <- getArgs
@@ -37,6 +38,8 @@ data LispVal = Atom String
            | Bool Bool
            | Character Char
            | Float Float
+           | Ratio Rational
+           | Complex (Complex Double)
 
 parseString :: Parser LispVal
 parseString = do char '"'
@@ -119,6 +122,7 @@ parseExpr = parseAtom
         <|> try parseBool
         <|> try parseCharacter
         <|> try parseFloat
+        <|> try parseRatio
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -140,3 +144,16 @@ parseFloat = do x <- many1 digit
                 char '.'
                 y <- many1 digit
                 return $ Float (fst . head $ readFloat (x ++ "." ++ y))
+
+parseRatio :: Parser LispVal
+parseRatio = do x <- many1 digit
+                char '/'
+                y <- many1 digit
+                return $ Ratio ((read x) % (read y))
+
+parseComplex :: Parser LispVal
+parseComplex = do x <- try $ parseFloat <|> parseDecimal
+                  char '+'
+                  y <- try $ parseFloat <|> parseDecimal
+                  char 'i'
+                  return $ Complex (toDouble x :+ toDouble y)
