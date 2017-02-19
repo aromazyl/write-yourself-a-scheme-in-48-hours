@@ -27,7 +27,7 @@ symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
                    Left err -> "No match: " ++ (show err :: String)
-                   Right val -> "Found value"
+                   Right val -> "Found " ++ show val
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -239,8 +239,14 @@ showVal (Atom name) = name
 showVal (Number contents) = show contents
 showVal (Bool True) = "#t"
 showVal (Bool False) = "#f"
-showVal (DottedList xs y) = (show (map showVal xs)) ++ (showVal y)
 showVal (Character x) = show x
 showVal (Float num) = show num
 showVal (Ratio ratio) = show ratio
 showVal (Complex num) = show num
+showVal (List contents) = "(" ++ unwordsList contents ++ ")"
+showVal (DottedList head tail) = "(" ++ unwordsList head ++ " . " ++ showVal tail ++ ")"
+
+unwordsList :: [LispVal] -> String
+unwordsList = unwords . map showVal
+
+instance Show LispVal where show = showVal
