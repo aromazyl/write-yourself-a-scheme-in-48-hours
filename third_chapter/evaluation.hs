@@ -18,16 +18,15 @@ import Data.Ratio
 import Data.Complex
 
 main :: IO ()
-main = do args <- getArgs
-          (return $ readExpr $ args !! 0) >>= putStrLn
+main = getArgs >>= putStrLn . show . eval . readExpr . (!! 0)
 
 symbol :: Parser Char
 symbol = oneOf "!$%&|*+-/:<=?>@^_~#"
 
-readExpr :: String -> String
+readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-                   Left err -> "No match: " ++ (show err :: String)
-                   Right val -> "Found " ++ show val
+                   Left err -> String $ "No match: " ++ (show err :: String)
+                   Right val -> val
 
 spaces :: Parser ()
 spaces = skipMany1 space
@@ -250,3 +249,14 @@ unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
 
 instance Show LispVal where show = showVal
+
+eval :: LispVal -> LispVal
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Bool _)   = val
+eval (List [Atom "quote", val]) = val
+eval (List (Atom func : args) = apply func $ map eval args
+
+
+apply :: String -> [LispVal] -> LispVal
+apply func args = maybe (Bool False）($ args) $ lookup func primitives
