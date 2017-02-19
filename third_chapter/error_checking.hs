@@ -16,6 +16,7 @@ import Numeric
 import Data.Array
 import Data.Ratio
 import Data.Complex
+import Control.Monad.Error
 
 main :: IO ()
 main = getArgs >>= putStrLn . show . eval . readExpr . (!! 0)
@@ -311,3 +312,19 @@ symbol2String (Atom s)    = String s
 symbol2string _           = String ""
 string2symbol (String s)  = Atom s
 string2symbol _           = Atom ""
+
+data LispError = NumArgs Integer [LispVal]
+               | TypeMismatch String LispVal
+               | Parser ParseError
+               | BadSpecialForm String LispVal
+               | NotFunction String String
+               | UnboundVar String String
+               | Default String
+
+showError :: LispError -> String
+showError (UnboundVar message varname) = message ++ ": " ++ varname
+showError (BadSpecialForm message form) = message ++ ": " ++ show form
+showError (NotFunction message func) = message ++ ": " ++ show func
+showError (NumArgs expected found) = "Expected " ++ show expected ++ " args: found values " ++ unwordsList found
+showError (TypeMismatch expected found) = "Invalid type: expected " ++ expected
+instance Show LispError where show = showError
