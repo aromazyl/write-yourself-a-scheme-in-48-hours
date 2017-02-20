@@ -296,7 +296,12 @@ primitives = [("+", numericBinop (+)),
               ("string>=?", stringBoolBinop (>=)),
               ("number?", unaryOp $ return . isNumber),
               ("bool?", unaryOp $ return . isBool),
-              ("list?", unaryOp $ return . isList)]
+              ("list?", unaryOp $ return . isList),
+              ("car", car),
+              ("cdr", cdr),
+              ("cons", cons),
+              ("eqv?", eqv),
+              ("equal?", equal)]
 
 boolBinop :: (LispVal -> ThrowsError a) -> (a -> a -> Bool) -> [LispVal] -> ThrowsError LispVal
 boolBinop unpacker op args = if length args /= 2
@@ -431,3 +436,12 @@ unpackEquals arg1 arg2 (AnyUnpacker unpacker) =
      unpacked2 <- unpacker arg2
      return $ unpacked1 == unpacked2
   `catchError` (const $ return False)
+
+equal :: [LispVal] -> ThrowsError LispVal
+equal [arg1, arg2] = do
+  primitiveEquals <- liftM or $ mapM (unpackEquals arg1 arg2)
+      [AnyUnpacker unpackNum, AnyUnpacker unpackStr, AnyUnpacker unpackBool]
+  eqvEquals <- eqv [arg1, arg2]
+  return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
+
+equal badArgList = throwError $ NumArgs 2 badArgList
