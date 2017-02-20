@@ -261,6 +261,18 @@ eval val@(String _) = return val
 eval val@(Number _) = return val
 eval val@(Bool _)   = return val
 eval (List [Atom "quote", val]) = return val
+eval (List ((Atom "cond") : cs)) = do
+  b <- (liftM (take 1 . dropWhile f) $ mapM condClause cs) >>= cdr
+  car [b] >>= eval
+    where condClause (List [p, b]) = do q <- eval p
+                                        case q of
+                                          Bool _ -> return $ List [q, b]
+                                          _      -> throwError $ TypeMismatch "bool" q
+          condClause v             = throwError $ TypeMismatch  "(pred body)" v
+          f                        = \(List [a, b]) -> case a of
+                                                      (Bool False) -> True
+                                                      _            -> False
+
 eval (List [Atom "if", pred , conseq, alt]) =
                      do result <- eval pred
                         case result of
