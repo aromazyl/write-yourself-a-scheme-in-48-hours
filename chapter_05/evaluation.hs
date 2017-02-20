@@ -6,6 +6,7 @@
 -- Distributed under terms of the MIT license.
 --
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Main where
 
@@ -421,3 +422,12 @@ eqv [(DottedList xs x), (DottedList ys y)] = eqv [List $ xs ++ [x], List $ ys ++
 eqv [_, _] = return $ Bool False
 eqv [badArg] = throwError $ TypeMismatch "pair" badArg
 eqv badArgList = throwError $ NumArgs 1 badArgList
+
+data Unpacker = forall a. Eq a => AnyUnpacker (LispVal -> ThrowsError a)
+
+unpackEquals :: LispVal -> LispVal -> Unpacker -> ThrowsError Bool
+unpackEquals arg1 arg2 (AnyUnpacker unpacker) =
+  do unpacked1 <- unpacker arg1
+     unpacked2 <- unpacker arg2
+     return $ unpacked1 == unpacked2
+  `catchError` (const $ return False)
