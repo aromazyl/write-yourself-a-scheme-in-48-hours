@@ -17,6 +17,7 @@ import Numeric
 import Data.Array
 import Data.Ratio
 import Data.Complex
+import Data.Boolean
 import Control.Monad.Error
 
 main :: IO ()
@@ -281,6 +282,18 @@ eval (List [Atom "if", pred , conseq, alt]) =
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
+eval form@(List (Atom "case" : key : clause)) =
+  if null clause
+  then throwError $ BadSpecialForm "no true clause in case expression: " form
+  else case head clause of
+    List (Atom "else" : exprs) -> mapM eval exprs >>= return . last
+    List ((List datums) : exprs) -> do
+      result <- eval key
+      equality <- mapM (\x -> eqv [x, result]) datums
+      if (Bool True) `elem` equality
+      then mapM eval exprs >>= return . last
+      else eval $ List (Atom "case" : key : tail clause)
+    _ -> throwError $ BadSpecialForm "ill-formed case expression: " form
 
 apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitives function args" func) ($ args) $ lookup func primitives
@@ -457,3 +470,5 @@ equal [arg1, arg2] = do
   return $ Bool $ (primitiveEquals || let (Bool x) = eqvEquals in x)
 
 equal badArgList = throwError $ NumArgs 2 badArgList
+
+
